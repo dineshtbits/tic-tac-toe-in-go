@@ -5,82 +5,66 @@ import (
 )
 
 type Player struct {
-	name   string
-	picks  []int
-	symbol string
+	id   int
+	name string
 }
 
-var attempts []int = []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
-var winningSeq [][]int = [][]int{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {1, 4, 7}, {3, 6, 9}, {1, 5, 9}, {3, 5, 7}, {2, 5, 8}}
+var attempts [9]*Player
 
-func (p *Player) pick() bool {
-	if len(attempts) <= 0 {
-		return false
-	}
-
+func (p *Player) pick() int {
 	fmt.Printf("Enter %v your pick: ", p.name)
 	var number int
 	fmt.Scanf("%d", &number)
 
-	if indexOf(attempts, number) == -1 {
+	if number > 8 || number < 0 || attempts[number] != nil {
 		fmt.Printf("the spot %v is either invalid or already taken, available spots %v try again.....", number, attempts)
 		return p.pick()
 	} else {
-		// add to player picks
-		p.picks = append(p.picks, number)
-		// remove from attempts
-		attempts = append(attempts[:indexOf(attempts, number)], attempts[indexOf(attempts, number)+1:]...)
-		// Check for winning sequence
-		return checkForWinningSeq(p.picks)
+		attempts[number] = p
+		return checkForWinningSeq(attempts)
 	}
 }
 
-func checkForWinningSeq(picks []int) bool {
-	matched := false
-	for _, seq := range winningSeq {
-		if sequencePicked(seq, picks) {
-			matched = true
-			break
+func checkForWinningSeq(attempts [9]*Player) int {
+	sums := []int{0, 0, 0, 0, 0, 0, 0, 0}
+	sums[0] = getId(attempts[2]) + getId(attempts[4]) + getId(attempts[6])
+	sums[1] = getId(attempts[0]) + getId(attempts[3]) + getId(attempts[6])
+	sums[2] = getId(attempts[1]) + getId(attempts[4]) + getId(attempts[7])
+	sums[3] = getId(attempts[2]) + getId(attempts[5]) + getId(attempts[8])
+	sums[4] = getId(attempts[0]) + getId(attempts[4]) + getId(attempts[8])
+	sums[5] = getId(attempts[6]) + getId(attempts[7]) + getId(attempts[8])
+	sums[6] = getId(attempts[3]) + getId(attempts[4]) + getId(attempts[5])
+	sums[7] = getId(attempts[0]) + getId(attempts[1]) + getId(attempts[2])
+
+	for _, v := range sums {
+		if v == 3 {
+			return 1
+		} else if v == 30 {
+			return 2
 		}
 	}
-	return matched
+	return 0
 }
 
-func sequencePicked(seq []int, picks []int) bool {
-	found := true
-	for _, ele := range seq {
-		if indexOf(picks, ele) == -1 {
-			found = false
-			break
-		}
+func getId(p *Player) int {
+	if p == nil {
+		return 0
+	} else {
+		return p.id
 	}
-	return found
 }
 
-func indexOf(items []int, element int) int {
-	index := -1
-	for i, val := range items {
-		if val == element {
-			index = i
-		}
-	}
-	return index
-}
-
-func showGrid(player1 *Player, player2 *Player) {
+func showGrid(attempts [9]*Player) {
 	fmt.Printf("Board: \n")
-	for i := 1; i <= 9; i++ {
-		if indexOf(player1.picks, i) >= 0 {
-			fmt.Printf("|	%v	|", player1.name)
-		} else if indexOf(player2.picks, i) >= 0 {
-			fmt.Printf("|	%v	|", player2.name)
+	for i := 0; i <= 8; i++ {
+		if attempts[i] != nil {
+			fmt.Printf("|	%v	|", attempts[i].name)
 		} else {
 			fmt.Printf("|	%v	|", i)
 		}
-
-		if i%3 == 0 {
+		if (i+1)%3 == 0 {
 			fmt.Printf("\n")
-			fmt.Printf("---------------------------------------------------")
+			fmt.Printf("-------------------------------------------------")
 			fmt.Printf("\n")
 		}
 	}
@@ -88,23 +72,29 @@ func showGrid(player1 *Player, player2 *Player) {
 
 func main() {
 
-	player1 := &Player{name: "dinesh"}
-	player2 := &Player{name: "karthik"}
+	player1 := &Player{name: "P1", id: 1}
+	player2 := &Player{name: "P2", id: 10}
 
-	for len(attempts) > 0 {
-		showGrid(player1, player2)
-		if player1.pick() {
+	gameOver := false
+
+	for !gameOver {
+		showGrid(attempts)
+		if player1.pick() == 1 {
 			fmt.Printf("%v won\n", player1.name)
+			gameOver = true
 			break
 		}
-
-		showGrid(player1, player2)
-		if player2.pick() {
+		showGrid(attempts)
+		if player2.pick() == 2 {
 			fmt.Printf("%v won\n", player2.name)
+			gameOver = true
 			break
 		}
 	}
-	if len(attempts) <= 0 {
+
+	if !gameOver {
 		fmt.Printf("Match draw\n")
+	} else {
+		showGrid(attempts)
 	}
 }

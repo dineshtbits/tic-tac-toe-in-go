@@ -1,57 +1,64 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"reflect"
+	"strconv"
 )
 
 type Player struct {
-	id   int
-	name string
+	name      string
+	pickCount int
 }
 
 var attempts [9]*Player
+var winningSeq = [][]int{
+	{2, 4, 6},
+	{0, 3, 6},
+	{1, 4, 7},
+	{2, 5, 8},
+	{0, 4, 8},
+	{6, 7, 8},
+	{3, 4, 5},
+	{0, 1, 2}}
 
-func (p *Player) pick() int {
+func (p *Player) pick() *Player {
 	fmt.Printf("Enter %v your pick: ", p.name)
 	var number int
 	fmt.Scanf("%d", &number)
 
 	if number > 8 || number < 0 || attempts[number] != nil {
-		fmt.Printf("the spot %v is either invalid or already taken, available spots %v try again.....", number, attempts)
+		fmt.Printf("the spot %v is either invalid or already taken", number)
 		return p.pick()
 	} else {
+		p.pickCount++
 		attempts[number] = p
-		return checkForWinningSeq(attempts)
+		return checkForWinner()
 	}
 }
 
-func checkForWinningSeq(attempts [9]*Player) int {
-	sums := []int{0, 0, 0, 0, 0, 0, 0, 0}
-	sums[0] = getId(attempts[2]) + getId(attempts[4]) + getId(attempts[6])
-	sums[1] = getId(attempts[0]) + getId(attempts[3]) + getId(attempts[6])
-	sums[2] = getId(attempts[1]) + getId(attempts[4]) + getId(attempts[7])
-	sums[3] = getId(attempts[2]) + getId(attempts[5]) + getId(attempts[8])
-	sums[4] = getId(attempts[0]) + getId(attempts[4]) + getId(attempts[8])
-	sums[5] = getId(attempts[6]) + getId(attempts[7]) + getId(attempts[8])
-	sums[6] = getId(attempts[3]) + getId(attempts[4]) + getId(attempts[5])
-	sums[7] = getId(attempts[0]) + getId(attempts[1]) + getId(attempts[2])
+func comparePicks(values ...int) bool {
+	return attempts[values[0]] != nil &&
+		func() bool {
+			result := true
+			for _, item := range values[1:] {
+				if !reflect.DeepEqual(attempts[values[0]], attempts[item]) {
+					result = false
+					break
+				}
+			}
+			return result
+		}()
+}
 
-	for _, v := range sums {
-		if v == 3 {
-			return 1
-		} else if v == 30 {
-			return 2
+func checkForWinner() *Player {
+	for _, seq := range winningSeq {
+		if comparePicks(seq...) {
+			return attempts[seq[0]]
 		}
 	}
-	return 0
-}
-
-func getId(p *Player) int {
-	if p == nil {
-		return 0
-	} else {
-		return p.id
-	}
+	return nil
 }
 
 func showGrid(attempts [9]*Player) {
@@ -70,28 +77,46 @@ func showGrid(attempts [9]*Player) {
 	}
 }
 
+func allPicksComplete(players ...*Player) bool {
+	var picks int
+	for _, player := range players {
+		picks += player.pickCount
+	}
+	return picks >= len(attempts)
+}
+
+func createPlayers(count int) []*Player {
+	var players []*Player
+	for i := 1; i <= count; i++ {
+		players = append(players, &Player{name: "P" + strconv.Itoa(i)})
+	}
+	return players
+}
+
 func main() {
-
-	player1 := &Player{name: "P1", id: 1}
-	player2 := &Player{name: "P2", id: 10}
-
+	// Initialize program
+	noOfPlayers := flag.Int("players", 2, "Please enter the no.of players")
+	flag.Parse()
+	players := createPlayers(*noOfPlayers)
 	gameOver := false
 
-	for !gameOver {
+	// Start picks
+	for i := 0; !allPicksComplete(players...); {
 		showGrid(attempts)
-		if player1.pick() == 1 {
-			fmt.Printf("%v won\n", player1.name)
+		if players[i].pick() != nil {
+			fmt.Printf("%v won\n", players[i].name)
 			gameOver = true
 			break
 		}
-		showGrid(attempts)
-		if player2.pick() == 2 {
-			fmt.Printf("%v won\n", player2.name)
-			gameOver = true
-			break
+		// choosing the next player to pick. Looping over
+		if i == len(players)-1 {
+			i = 0
+		} else {
+			i++
 		}
 	}
 
+	// Result
 	if !gameOver {
 		fmt.Printf("Match draw\n")
 	} else {
